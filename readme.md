@@ -25,7 +25,7 @@ pip install pandas
 pip install XlsxWriter
 pip install requests
 pip install playwright
-
+pip install ddddocr
 ```
 
 ### 2、安装依赖
@@ -36,4 +36,9 @@ pip install -r requirements.txt
 ### 3、保存依赖
 ```shell
 pip freeze > requirements.txt
+```
+
+```shell
+python -m playwright codegen --save-storage=auth.json --target python -o examples/test.py -b chromium https://srh.bankofchina.com/search/whpj/search_cn.jsp
+python -m playwright codegen --load-storage=auth.json --target python -o examples/test.py -b chromium https://srh.bankofchina.com/search/whpj/search_cn.jsp
 ```

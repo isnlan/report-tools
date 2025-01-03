@@ -4,7 +4,7 @@ from datetime import datetime
 
 import ddddocr
 import pandas as pd
-from playwright.sync_api import sync_playwright, Page, Playwright
+from playwright.sync_api import sync_playwright, Page, Playwright, TimeoutError
 
 
 def ocr_image(data: bytes) -> str:
@@ -85,13 +85,17 @@ def get_page_count(page: Page):
     # 定位到分页导航元素
     pagination_selector = 'div.turn_page#list_navigator ol li'
 
-    # 等待分页导航元素加载
-    page.wait_for_selector(pagination_selector)
+    try:
+        # 等待分页导航元素加载
+        page.wait_for_selector(pagination_selector, timeout=3000)
+    except TimeoutError:
+        print("分页导航元素未找到。")
+        return 1
 
     # 获取所有 <li> 元素
     pagination_items = page.query_selector_all(pagination_selector)
 
-    total_pages = None
+    total_pages = 1
 
     # 遍历所有 <li> 元素，查找包含 "共X页" 的元素
     for item in pagination_items:
@@ -132,10 +136,14 @@ def get_table(page: Page):
     data = []
 
     for current_page in range(count):
+        if current_page != 0:
+            # 点击下一页
+            page.get_by_role("link", name="下一页").click()
+
         # 获取所有数据行（跳过表头行）
         rows = page.query_selector_all(f'{table_selector} tbody tr')
         for index, row in enumerate(rows):
-            # 如果 thead 不存在且这是第一行，则跳过（表头行）
+            # 如果这是第一行，则跳过（表头行）
             if index == 0:
                 continue
             cells = row.query_selector_all('td')
@@ -150,8 +158,6 @@ def get_table(page: Page):
             else:
                 print(f"第 {current_page} 页的第 {index + 1} 行为空，已跳过。")
 
-        # 点击下一页
-        page.get_by_role("link", name="下一页").click()
 
     # 检查是否提取到了数据
     if not data:
@@ -167,15 +173,15 @@ def get_table(page: Page):
 
 
 def run(playwright: Playwright, f) -> None:
-    browser = playwright.chromium.launch(headless=True, args=["--start-maximized"], slow_mo=500)
+    browser = playwright.chromium.launch(headless=False, args=["--start-maximized"], slow_mo=500)
 
     kwargs = {
         "java_script_enabled": True,
         "viewport": {"width": 1920, "height": 1080},
         "no_viewport": True,
     }
-    contex = browser.new_context(**kwargs)
-    page = contex.new_page()
+    context = browser.new_context(**kwargs)
+    page = context.new_page()
 
     f(page)
 

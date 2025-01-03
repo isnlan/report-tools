@@ -1,12 +1,10 @@
 import base64
-from datetime import datetime
-import pandas as pd
 import re
+from datetime import datetime
 
 import ddddocr
-import csv
-
-from playwright.sync_api import sync_playwright, Page, Browser, Playwright
+import pandas as pd
+from playwright.sync_api import sync_playwright, Page, Playwright
 
 
 def ocr_image(data: bytes) -> str:
@@ -65,9 +63,9 @@ def run_task(page: Page):
         earliest_record = df_am_10_oclock.loc[df_am_10_oclock['发布时间'].idxmin()]
 
         # 提取 '现钞买入价'
-        现钞买入价 = earliest_record['现钞买入价']
+        balance = earliest_record['现钞卖出价']
 
-        print(f"发布时间在10点间，时间最小的现钞买入价为: {现钞买入价}")
+        print(f"发布时间在10点间，时间最小的现钞卖出价为: {balance}")
     else:
         print("没有找到发布时间在10点间的记录。")
 
@@ -169,7 +167,7 @@ def get_table(page: Page):
 
 
 def run(playwright: Playwright, f) -> None:
-    browser = playwright.chromium.launch(headless=False, args=["--start-maximized"], slow_mo=500)
+    browser = playwright.chromium.launch(headless=True, args=["--start-maximized"], slow_mo=500)
 
     kwargs = {
         "java_script_enabled": True,

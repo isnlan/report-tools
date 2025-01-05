@@ -29,6 +29,14 @@ def get_code(page: Page) -> str:
 
         return ocr_image(img_bytes)
 
+def get_month_first_last_day(year, month):
+    # 获取该月的第一天
+    first_day = datetime(year, month, 1)
+    
+    # 获取该月的最后一天
+    last_day = datetime(year, month, calendar.monthrange(year, month)[1])
+    
+    return first_day, last_day
 
 def run_task(page: Page):
     page.goto("https://srh.bankofchina.com/search/whpj/search_cn.jsp")

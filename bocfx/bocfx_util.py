@@ -1,5 +1,6 @@
 import base64
 import re
+import time
 from datetime import datetime
 
 import ddddocr
@@ -7,6 +8,8 @@ import pandas as pd
 from pandas import DataFrame
 from playwright.sync_api import sync_playwright, Page, Playwright, TimeoutError
 import calendar
+
+from bocfx.browser import BrowserSingleton
 
 
 def ocr_image(data: bytes) -> str:
@@ -47,8 +50,9 @@ def run_task(page: Page, start_time: str, end_time: str):
 
     page.locator("input[name=\"erectDate\"]").fill(start_time)
     page.locator("input[name=\"nothing\"]").fill(end_time)
-
     page.locator("#pjname").select_option("美元")
+
+    # requset(page)
 
     while True:
         # 获取验证码
@@ -64,6 +68,14 @@ def run_task(page: Page, start_time: str, end_time: str):
     data = get_table(page)
 
     return data
+
+
+# def requset(page: Page):
+#     r = page.request.post('https://srh.bankofchina.com/search/whpj/search_cn.jsp',
+#                           form={'erectDate': "2024-12-1", 'nothing': "2024-12-1", 'pjname': "美元", 'page': '1'})
+#     t = r.text()
+#
+#     print(t)
 
 
 def output_csv(df: DataFrame):
@@ -108,7 +120,7 @@ def get_page_count(page: Page):
 
     try:
         # 等待分页导航元素加载
-        page.wait_for_selector(pagination_selector, timeout=3000)
+        page.wait_for_selector(pagination_selector, timeout=1000)
     except TimeoutError:
         print("分页导航元素未找到。")
         return 1
@@ -142,7 +154,15 @@ def get_table(page: Page):
     for current_page in range(count):
         if current_page != 0:
             # 点击下一页
-            page.get_by_role("link", name="下一页").click()
+            target_text = "对不起，你一分钟内访问次数超过10次！"
+            page_content = page.content()
+            if target_text in page_content:
+                page.goto("https://srh.bankofchina.com/search/whpj/search_cn.jsp")
+                time.sleep(2)
+
+            if "下一页" in page_content:
+                page.get_by_role("link", name="下一页").click()
+                time.sleep(2)
 
         # 获取所有数据行（跳过表头行）
         rows = page.query_selector_all(f'{table_selector} tbody tr')
@@ -159,8 +179,6 @@ def get_table(page: Page):
             # 检查所有单元格是否为空字符串
             if not all((cell == '' or cell is None) for cell in row_data):
                 data.append(row_data)
-            else:
-                print(f"第 {current_page} 页的第 {index + 1} 行为空，已跳过。")
 
     return data
 
@@ -173,9 +191,13 @@ def run(playwright: Playwright, start_time: str, end_time: str):
         "viewport": {"width": 1920, "height": 1080},
         "no_viewport": True,
     }
+
+    browser.new_page()
     context = browser.new_context(**kwargs)
-    # context.set_default_timeout(60*60*1000)
     page = context.new_page()
+
+    # browser = BrowserSingleton.get_browser()
+    # page = browser.new_page()
 
     data = run_task(page, start_time, end_time)
 
@@ -188,6 +210,7 @@ def run(playwright: Playwright, start_time: str, end_time: str):
 def get_headers():
     headers = ['货币名称', '现汇买入价', '现钞买入价', '现汇卖出价', '现钞卖出价', '中行折算价', '发布时间']
     return headers
+
 
 def get_bocfx_data_by_time(start_time: str, end_time: str):
     with sync_playwright() as playwright:

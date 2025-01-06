@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 from bocfx.bocfx_util import get_bocfx_data_by_time, get_headers, output_csv
-from bocfx.browser import BrowserSingleton
 
 
 # 定义任务执行的函数
@@ -60,10 +59,8 @@ if __name__ == '__main__':
     start_data = "2024-12-1"
     end_data = "2024-12-31"
 
-    BrowserSingleton.get_browser()
-
     headers = get_headers()
-    data = main(start_data, end_data, 1, 10)
+    data = main(start_data, end_data, 1, 2)
 
     df = pd.DataFrame(data, columns=headers)
 

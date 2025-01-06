@@ -9,8 +9,6 @@ from pandas import DataFrame
 from playwright.sync_api import sync_playwright, Page, Playwright, TimeoutError
 import calendar
 
-from bocfx.browser import BrowserSingleton
-
 
 def ocr_image(data: bytes) -> str:
     ocr = ddddocr.DdddOcr(show_ad=False)
@@ -196,9 +194,6 @@ def run(playwright: Playwright, start_time: str, end_time: str):
     context = browser.new_context(**kwargs)
     page = context.new_page()
 
-    # browser = BrowserSingleton.get_browser()
-    # page = browser.new_page()
-
     data = run_task(page, start_time, end_time)
 
     page.close()
@@ -214,4 +209,6 @@ def get_headers():
 
 def get_bocfx_data_by_time(start_time: str, end_time: str):
     with sync_playwright() as playwright:
-        return run(playwright, start_time, end_time)
+        return run1(playwright, start_time, end_time)
+
+    # return run(start_time, end_time)

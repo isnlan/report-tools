@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
 
-def get_table(page_content: str, selector: str):
+def get_data(page_content: str, selector: str):
     # 提取表格数据
     data = []
 

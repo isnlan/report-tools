@@ -1,15 +1,14 @@
 import base64
+import calendar
 import re
-import time
 from datetime import datetime
 
 import ddddocr
 import pandas as pd
 from pandas import DataFrame
 from playwright.sync_api import sync_playwright, Page, Playwright, TimeoutError
-import calendar
 
-from bocfx.browser import get_page
+from bocfx.html_util import get_data
 
 
 def ocr_image(data: bytes) -> str:
@@ -48,14 +47,13 @@ def get_month_first_last_day(year, month):
 def goto_main_page(page: Page):
     page.goto("https://srh.bankofchina.com/search/whpj/search_cn.jsp", wait_until="networkidle")
 
+
 def run_task(page: Page, start_time: str, end_time: str):
     goto_main_page(page)
 
     page.locator("input[name=\"erectDate\"]").fill(start_time)
     page.locator("input[name=\"nothing\"]").fill(end_time)
     page.locator("#pjname").select_option("美元")
-
-    # requset(page)
 
     while True:
         # 获取验证码
@@ -68,7 +66,7 @@ def run_task(page: Page, start_time: str, end_time: str):
         if not error_element:
             break
 
-    data = get_table(page)
+    data = get_table(page, start_time)
 
     return data
 
@@ -115,9 +113,8 @@ def get_page_count(page: Page):
 
     try:
         # 等待分页导航元素加载
-        page.wait_for_selector(pagination_selector, timeout=1000)
+        page.wait_for_selector(pagination_selector, timeout=3000)
     except TimeoutError:
-        print("分页导航元素未找到。")
         return 1
 
     # 获取所有 <li> 元素
@@ -136,7 +133,7 @@ def get_page_count(page: Page):
     return total_pages
 
 
-def get_table(page: Page):
+def get_table(page: Page, start_time: str):
     # 定位到表格元素
     table_selector = 'div.BOC_main.publish table'
     page.wait_for_selector(table_selector)
@@ -146,42 +143,34 @@ def get_table(page: Page):
     # 提取表格数据
     data = []
 
-    for current_page in range(count):
-        if current_page != 0:
-            # 点击下一页
-            target_text = "对不起，你一分钟内访问次数超过10次！"
-            page_content = page.content()
-            if target_text in page_content:
-                goto_main_page(page)
-                page.wait_for_timeout(2000)
+    for index in range(count):
+        page_number = index + 1
+        jump_target_page_umber(page, page_number, start_time)
 
-            if "下一页" in page_content:
-                page.get_by_role("link", name="下一页").click()
-                page.wait_for_timeout(2000)
-
-        # 获取所有数据行（跳过表头行）
-        rows = page.query_selector_all(f'{table_selector} tbody tr')
-        for index, row in enumerate(rows):
-            # 如果这是第一行，则跳过（表头行）
-            if index == 0:
-                continue
-            cells = row.query_selector_all('td')
-            if not cells:
-                # 如果没有 td，跳过该行
-                continue
-
-            row_data = [cell.inner_text().strip() for cell in cells]
-            # 检查所有单元格是否为空字符串
-            if not all((cell == '' or cell is None) for cell in row_data):
-                data.append(row_data)
+        data.extend(get_data(page.content(), table_selector))
 
     return data
 
 
-def run1(start_time: str, end_time: str):
-    page = get_page()
-    data = run_task(page, start_time, end_time)
-    return data
+def jump_target_page_umber(page: Page, page_number: int, start_time: str):
+    if page_number == 1:
+        return
+
+    while True:
+        if "对不起，你一分钟内访问次数超过10次！" in page.content():
+            print(f"{start_time} 检测到访问限制，刷新页面...")
+            page.reload(wait_until="networkidle")
+            page.wait_for_timeout(2000)
+            continue
+
+        link = page.get_by_role("link", name=f"{page_number}", exact=True)
+        if link.evaluate("element => element.classList.contains('current')"):
+            # 已经是当前页面了
+            return
+
+        # 点击跳转
+        link.click()
+        page.wait_for_load_state("networkidle")
 
 
 def run(playwright: Playwright, start_time: str, end_time: str):
@@ -213,5 +202,3 @@ def get_headers():
 def get_bocfx_data_by_time(start_time: str, end_time: str):
     with sync_playwright() as playwright:
         return run(playwright, start_time, end_time)
-
-    # return run1(start_time, end_time)

@@ -9,6 +9,8 @@ from pandas import DataFrame
 from playwright.sync_api import sync_playwright, Page, Playwright, TimeoutError
 import calendar
 
+from bocfx.browser import get_page
+
 
 def ocr_image(data: bytes) -> str:
     ocr = ddddocr.DdddOcr(show_ad=False)
@@ -43,8 +45,11 @@ def get_month_first_last_day(year, month):
     return first_day.strftime('%Y-%m-%d'), last_day.strftime('%Y-%m-%d')
 
 
+def goto_main_page(page: Page):
+    page.goto("https://srh.bankofchina.com/search/whpj/search_cn.jsp", wait_until="networkidle")
+
 def run_task(page: Page, start_time: str, end_time: str):
-    page.goto("https://srh.bankofchina.com/search/whpj/search_cn.jsp")
+    goto_main_page(page)
 
     page.locator("input[name=\"erectDate\"]").fill(start_time)
     page.locator("input[name=\"nothing\"]").fill(end_time)
@@ -66,14 +71,6 @@ def run_task(page: Page, start_time: str, end_time: str):
     data = get_table(page)
 
     return data
-
-
-# def requset(page: Page):
-#     r = page.request.post('https://srh.bankofchina.com/search/whpj/search_cn.jsp',
-#                           form={'erectDate': "2024-12-1", 'nothing': "2024-12-1", 'pjname': "美元", 'page': '1'})
-#     t = r.text()
-#
-#     print(t)
 
 
 def output_csv(df: DataFrame):
@@ -155,12 +152,12 @@ def get_table(page: Page):
             target_text = "对不起，你一分钟内访问次数超过10次！"
             page_content = page.content()
             if target_text in page_content:
-                page.goto("https://srh.bankofchina.com/search/whpj/search_cn.jsp")
-                time.sleep(2)
+                goto_main_page(page)
+                page.wait_for_timeout(2000)
 
             if "下一页" in page_content:
                 page.get_by_role("link", name="下一页").click()
-                time.sleep(2)
+                page.wait_for_timeout(2000)
 
         # 获取所有数据行（跳过表头行）
         rows = page.query_selector_all(f'{table_selector} tbody tr')
@@ -178,6 +175,12 @@ def get_table(page: Page):
             if not all((cell == '' or cell is None) for cell in row_data):
                 data.append(row_data)
 
+    return data
+
+
+def run1(start_time: str, end_time: str):
+    page = get_page()
+    data = run_task(page, start_time, end_time)
     return data
 
 
@@ -209,6 +212,6 @@ def get_headers():
 
 def get_bocfx_data_by_time(start_time: str, end_time: str):
     with sync_playwright() as playwright:
-        return run1(playwright, start_time, end_time)
+        return run(playwright, start_time, end_time)
 
-    # return run(start_time, end_time)
+    # return run1(start_time, end_time)

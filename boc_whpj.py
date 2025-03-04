@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-
+import chinese_calendar
 import pandas as pd
 
 from bocfx.bocfx_util import get_bocfx_data_by_time, get_headers, output_csv
@@ -22,19 +22,36 @@ def split_date_range(start_date: str, end_date: str, step: int):
     start = datetime.strptime(start_date, "%Y-%m-%d")
     end = datetime.strptime(end_date, "%Y-%m-%d")
 
-    # 使用生成器分割日期区间
+    # 使用生成器分割日期区间，只处理工作日
     current_date = start
     while current_date <= end:
-        # 计算下一步的结束日期
-        next_date = current_date + timedelta(days=step - 1)
-        if next_date > end:
-            next_date = end
+        # 如果当前日期是工作日，才进行处理
+        if chinese_calendar.is_workday(current_date):
+            # 计算下一步的结束日期
+            next_date = current_date
+            days_counted = 0
+            
+            # 向后查找指定天数的工作日
+            while days_counted < step and next_date <= end:
+                if not chinese_calendar.is_workday(next_date + timedelta(days=1)):
+                    break
 
-        # 将日期转换回字符串格式
-        yield current_date.strftime("%Y-%m-%d"), next_date.strftime("%Y-%m-%d")
+                next_date += timedelta(days=1)
 
-        # 更新当前日期
-        current_date = next_date + timedelta(days=1)
+                if next_date <= end:
+                    days_counted += 1
+            
+            if next_date > end:
+                next_date = end
+
+            # 将日期转换回字符串格式
+            yield current_date.strftime("%Y-%m-%d"), next_date.strftime("%Y-%m-%d")
+            
+            # 更新当前日期到下一个日期
+            current_date = next_date + timedelta(days=1)
+        else:
+            # 如果不是工作日，直接移到下一天
+            current_date += timedelta(days=1)
 
 
 # 主函数，使用 ThreadPoolExecutor 并行执行任务
@@ -56,7 +73,7 @@ def main(start_date: str, end_date: str, step: int, num_threads: int):
 
 
 if __name__ == '__main__':
-    start_data = "2025-02-1"
+    start_data = "2025-02-01"
     end_data = "2025-02-28"
 
     headers = get_headers()
@@ -64,4 +81,4 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(data, columns=headers)
 
-    output_csv(df)
+    output_csv("boc-"+start_data+"_"+end_data+".xlsx",df)

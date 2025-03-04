@@ -71,7 +71,7 @@ def run_task(page: Page, start_time: str, end_time: str):
     return data
 
 
-def output_csv(df: DataFrame):
+def output_csv(fname: str,df: DataFrame):
     # 将timestamp列转换为datetime类型
     df['发布时间'] = pd.to_datetime(df['发布时间'], format='%Y.%m.%d %H:%M:%S')
     df["时间"] = df['发布时间'].dt.strftime('%H:%M:%S')
@@ -93,7 +93,7 @@ def output_csv(df: DataFrame):
     print(df_earliest)
 
     # 保存到新的Excel文件
-    df_earliest.to_excel('earliest_10am_sell_price.xlsx', index=False)
+    df_earliest.to_excel(fname, index=False)
 
 
 def extract_total_pages(text):

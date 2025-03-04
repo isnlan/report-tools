@@ -27,6 +27,7 @@ pip install requests
 pip install playwright
 pip install ddddocr
 pip install bs4
+pip install chinese_calendar
 playwright install
 ```
 

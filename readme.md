@@ -26,6 +26,8 @@ pip install XlsxWriter
 pip install requests
 pip install playwright
 pip install ddddocr
+pip install bs4
+playwright install
 ```
 
 ### 2、安装依赖

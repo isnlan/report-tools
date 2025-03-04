@@ -56,8 +56,8 @@ def main(start_date: str, end_date: str, step: int, num_threads: int):
 
 
 if __name__ == '__main__':
-    start_data = "2024-12-1"
-    end_data = "2024-12-31"
+    start_data = "2025-02-1"
+    end_data = "2025-02-28"
 
     headers = get_headers()
     data = main(start_data, end_data, 1, 2)

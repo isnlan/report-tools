@@ -81,4 +81,7 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(data, columns=headers)
 
-    output_csv("boc-"+start_data+"_"+end_data+".xlsx",df)
+    file_name = f'boc-{start_data}_{end_data}.xlsx'
+
+
+    output_csv(file_name, df)

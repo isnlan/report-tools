@@ -83,5 +83,4 @@ if __name__ == '__main__':
 
     file_name = f'boc-{start_data}_{end_data}.xlsx'
 
-
     output_csv(file_name, df)
